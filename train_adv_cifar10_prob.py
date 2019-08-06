@@ -71,11 +71,16 @@ testset = torchvision.datasets.CIFAR10(root='../data', train=False, download=Tru
 test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
 
-def train(args, model, device, train_loader, optimizer, epoch, x_advs):
+def train(args, model, device, train_loader, optimizer, epoch, x_advs, perturb_prob):
     model.train()
-    x_advs = []
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
+
+        idx = torch.nonzero(torch.rand(data.shape[0], device=device)[:, None] < perturb_prob)[:, 0]
+
+        data = data.index_select(0, idx)
+        target = target.index_select(0, idx)
+
 
         optimizer.zero_grad()
 
@@ -91,6 +96,7 @@ def train(args, model, device, train_loader, optimizer, epoch, x_advs):
                            beta=args.beta)
         loss.backward()
         optimizer.step()
+        x_advs[batch_idx][idx] = x_adv
 
         # print progress
         if batch_idx % args.log_interval == 0:
@@ -155,13 +161,13 @@ def main():
     # init model, ResNet18() can be also used here for training
     model = WideResNet().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-
+    x_advs = []
     for epoch in range(1, args.epochs + 1):
         # adjust learning rate for SGD
         adjust_learning_rate(optimizer, epoch)
 
         # adversarial training
-        x_advs = train(args, model, device, train_loader, optimizer, epoch, x_advs)
+        x_advs = train(args, model, device, train_loader, optimizer, epoch, x_advs, perturb_prob=0.25)
 
         # evaluation on natural examples
         print('================================================================')
