@@ -84,7 +84,6 @@ def train(args, model, device, train_loader, optimizer, epoch, x_advs, perturb_p
 
         optimizer.zero_grad()
 
-        x_advs.append(x_adv)
         # calculate robust loss
         loss, x_adv = trades_loss_new(model=model,
                            x_natural=data,
