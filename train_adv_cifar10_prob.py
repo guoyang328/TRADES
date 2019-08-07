@@ -73,6 +73,7 @@ test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_si
 
 def train(args, model, device, train_loader, optimizer, epoch, x_advs, perturb_prob):
     model.train()
+    new_x_advs = []
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
 
@@ -95,14 +96,16 @@ def train(args, model, device, train_loader, optimizer, epoch, x_advs, perturb_p
                            beta=args.beta)
         loss.backward()
         optimizer.step()
-        x_advs[batch_idx][idx] = x_adv
+        new_x_adv = x_advs[batch_idx]
+        new_x_adv[idx] = x_adv
+        new_x_advs.append(new_x_adv)
 
         # print progress
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
-    return x_advs
+    return new_x_advs
 
 
 def eval_train(model, device, train_loader):
